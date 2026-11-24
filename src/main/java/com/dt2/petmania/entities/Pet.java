@@ -1,35 +1,37 @@
 package com.dt2.petmania.entities;
 
+
 import com.dt2.petmania.entities.enums.Porte;
 import com.dt2.petmania.entities.enums.Sexo;
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 
-@Entity
-@Table(name = "tb_pet")
+@Entity(name = "tb_pet")
 public class Pet {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
+    private Long id;
     private String nome;
     private String especie;
     private String raca;
     private int idade;
-
     @Enumerated(EnumType.STRING)
     private Sexo sexo;
-
     @Enumerated(EnumType.STRING)
     private Porte porte;
     private String personalidade;
     private String foto;
     private boolean disponivel;
 
-    public Pet (){}
+    public Pet() {
+    }
 
-    public Pet(Integer id, String nome, String especie, String raca, int idade, Sexo sexo, Porte porte, String personalidade, String foto, boolean disponivel) {
-        this.id = id;
+    public Pet(String nome, String especie, String raca, int idade, Sexo sexo, Porte porte, String personalidade, String foto, boolean disponivel) {
         this.nome = nome;
         this.especie = especie;
         this.raca = raca;
@@ -77,16 +79,12 @@ public class Pet {
         this.disponivel = disponivel;
     }
 
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public Integer getId() {
-        return id;
-    }
-
     public String getNome() {
         return nome;
+    }
+
+    public Long getId() {
+        return id;
     }
 
     public String getEspecie() {
@@ -119,10 +117,5 @@ public class Pet {
 
     public boolean isDisponivel() {
         return disponivel;
-    }
-
-    @Override
-    public String toString() {
-        return "Pet [id=" + id + ", name=" + nome + ", especie=" + especie + ", raça=" + raca + " , situação=" + disponivel + "]";
     }
 }
