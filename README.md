@@ -1,74 +1,131 @@
-# Pet Mania API
+# 🐾 Pet Mania
 
-Este repositório contém a correção e refatoração da **Pet Mania API**, um desafio prático focado em identificar e resolver problemas de comunicação, persistência e estruturação de rotas de uma aplicação Spring Boot integrada ao MySQL.
+API REST para gerenciamento de pets para adoção, desenvolvida com **Spring Boot**. O projeto também serve uma página web ("Pet Mania | Adoção de Pets") na raiz da aplicação.
 
-A aplicação serve como backend para gerir o registo, consulta e remoção de animais para adoção, comunicando tanto com uma interface web front-end como através de pedidos REST testados no Postman.
+## Tecnologias
 
----
+- Java 21
+- Spring Boot (Spring Web + Spring Data JPA)
+- Maven
+- MySQL
+- Jakarta Persistence (JPA/Hibernate)
 
-## Tecnologias Utilizadas
+## Estrutura do projeto
 
-* **Java 25**
-* **Spring Boot 4.1.2**
-* **Spring Data JPA & Hibernate**
-* **MySQL**
-* **Swagger / OpenAPI (springdoc-openapi)** para documentação interativa
-* **Postman** para testes dos endpoints[cite: 2]
+```
+com.dt2.petmania
+├── PetManiaApplication.java        # Classe principal
+├── controllers
+│   └── PetController.java          # Endpoints REST de /api/pets
+├── entities
+│   ├── Pet.java                    # Entidade (tabela tb_pet)
+│   └── enums
+│       ├── Porte.java              # PEQUENO, MEDIO, GRANDE
+│       └── Sexo.java               # MACHO, FEMEA
+└── repositories
+    └── PetRepository.java          # JpaRepository<Pet, Long>
+```
 
----
+## Modelo de dados
 
-## O que foi diagnosticado e corrigido?
+Tabela `tb_pet`:
 
-Durante a análise do código inicial, foram identificados e corrigidos diversos problemas que impediam a aplicação de arrancar ou de processar pedidos corretamente:
+| Campo         | Tipo    | Descrição                                |
+|---------------|---------|------------------------------------------|
+| id            | Long    | Chave primária (auto incremento)         |
+| nome          | String  | Nome do pet                              |
+| especie       | String  | Espécie (ex.: Cachorro, Gato)            |
+| raca          | String  | Raça (ex.: SRD)                          |
+| idade         | int     | Idade                                    |
+| sexo          | Enum    | `MACHO` ou `FEMEA`                       |
+| porte         | Enum    | `PEQUENO`, `MEDIO` ou `GRANDE`           |
+| personalidade | String  | Descrição do temperamento                |
+| foto          | String  | URL/caminho da foto                      |
+| disponivel    | boolean | Indica se está disponível para adoção    |
 
-### 1. Dependências e Versão no pom.xml
-* **Versão incorreta do JDK:** O projeto apontava para a versão 21. Ajustámos para uma versão estável e compatível do Java 25.
-* **Falta de starters essenciais:** O projeto declarava apenas o `spring-boot-starter` básico. Adicionamos o `spring-boot-starter-web` (necessário para subir o servidor Tomcat e processar pedidos HTTP) e o `spring-boot-starter-data-jpa` (para gerir entidades e ligação à base de dados).
+## Como executar
 
-### 2. Entidade Pet e Modelação na Base de Dados
-* **Erro de conversão (int vs Integer):** O identificador da entidade estava definido como `int` primitivo com inicial maiúscula (`private int Id`). Como no registo o `id` não é enviado no payload JSON (é gerado pela base de dados), o conversor tentava injetar `null` num tipo primitivo, gerando um erro. Alterámos para o wrapper `Integer id`, adicionamos o construtor padrão sem argumentos exigido pelo Hibernate e criamos os getters e setters necessários.
-* **Mapeamento de Enums e Check Constraints:** Os campos `sexo` e `porte` não tinham anotação explícita de enum. Por padrão, a JPA tenta gravar o valor ordinal numérico, o que violava as restrições (`CHECK constraints`) da tabela `tb_pet`. Adicionamos a anotação `@Enumerated(EnumType.STRING)` para garantir que valores textuais (como `MACHO`, `FEMEA`, `PEQUENO`, `MEDIO`, `GRANDE`) fossem gravados corretamente.
+### Pré-requisitos
 
-### 3. Camada de Repositório (PetRepository)
-* No repositório existia a declaração inválida `public class PetRepository extends CrudRepository<Pet, int>` sem parâmetros. Removemos essa linha, aproveitando os métodos nativos fornecidos pelo `JpaRepository` (`findAll()`, `findById(ID id)` e `deleteById(ID id)`).
+- JDK 21
+- Maven
+- MySQL em execução
 
-### 4. Camada de Controller (PetController)
-* **Anotações e Rotas:** Existia um erro de sintaxe (`@RequestMaping`) e o caminho `/api/pets` estava declarado no `@RestController`, o que não configurava a rota base. Corrigimos para `@RequestMapping("/api/pets")`.
-* **Inversão dos Métodos HTTP:** Os métodos estavam trocados — a listagem utilizava `@PostMapping` e a criação utilizava `@GetMapping`. Corrigimos para os padrões REST adequados:
-  * `GET` para consulta de dados.
-  * `POST` para registo de novos registos.
-  * Implementação do endpoint de remoção `DELETE /{id}`.
-  * Implementação da procura por identificador `GET /{id}`.
-* **CORS:** Adicionámos a anotação `@CrossOrigin(origins = "*")` para permitir que a interface front-end comunique com a API sem bloqueios de política de mesma origem.
+### Configuração do banco
 
----
+Crie o banco e configure o `src/main/resources/application.properties` com os seus dados:
 
-## Endpoints da API
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/<nome_do_banco>
+spring.datasource.username=<usuario>
+spring.datasource.password=<senha>
+spring.jpa.hibernate.ddl-auto=update
+```
 
-O endereço base da aplicação é `http://localhost:8080/api/pets`.
+### Rodando
 
-| Método | Endpoint | Descrição | Status HTTP |
-| :--- | :--- | :--- | :--- |
-| **GET** | `/api/pets` | Devolve todos os animais registados | `200 OK` |
-| **GET** | `/api/pets/{id}` | Procura um animal específico pelo ID | `200 OK` |
-| **POST** | `/api/pets` | Regista um novo animal | `201 Created` |
-| **DELETE** | `/api/pets/{id}` | Remove um animal do sistema | `204 No Content` |
+```bash
+mvn spring-boot:run
+```
 
----
+A aplicação sobe em `http://localhost:8080`.
 
-## Exemplo de Payload para Registo (POST)
+## Endpoints
 
-Para testar o registo via Postman, configure o cabeçalho com `Content-Type: application/json` e utilize o seguinte corpo no pedido (sem o campo `id`):
+Base URL: `http://localhost:8080/api/pets`
+
+| Método | Rota        | Descrição                | Status                  |
+|--------|-------------|--------------------------|-------------------------|
+| GET    | `/api/pets` | Lista todos os pets      | ✅ Implementado         |
+| POST   | `/api/pets` | Cadastra um novo pet     | ✅ Implementado         |
+| DELETE | `/api/pets/{id}` | Remove um pet       | 🚧 A implementar        |
+
+### Exemplo: cadastrar pet (POST)
 
 ```json
 {
-  "nome": "",
-  "especie": "Cão",
-  "raca": "Labrador",
-  "idade": 3,
-  "sexo": "Macho",
-  "porte": "Medio",
-  "personalidade": "Brincalhão e dócil",
-  "foto": "[https://exemplo.com/fotos/rex.jpg](https://exemplo.com/fotos/rex.jpg)",
+  "nome": "Teste de cadastro",
+  "especie": "Cachorro",
+  "raca": "SRD",
+  "idade": 2,
+  "sexo": "FEMEA",
+  "porte": "MEDIO",
+  "personalidade": "Docil",
+  "foto": "",
   "disponivel": true
 }
+```
+
+### Exemplo: resposta (GET)
+
+```json
+[
+  {
+    "nome": "Teste de cadastro",
+    "especie": "Cachorro",
+    "raca": "SRD",
+    "idade": 2,
+    "sexo": "FEMEA",
+    "porte": "MEDIO",
+    "personalidade": "Docil",
+    "foto": "",
+    "disponivel": true,
+    "id": 1
+  }
+]
+```
+
+## Testando
+
+Os endpoints podem ser testados com o [Postman](https://www.postman.com/):
+
+1. `POST localhost:8080/api/pets` com o corpo JSON acima (raw → JSON).
+2. `GET localhost:8080/api/pets` para listar os pets cadastrados.
+3. `GET localhost:8080` para abrir a página inicial.
+
+## Próximos passos
+
+- [ ] Implementar `DELETE /api/pets/{id}`
+- [ ] Endpoints de busca por id e atualização (PUT)
+- [ ] Filtros por espécie, porte e disponibilidade
+- [ ] Validação dos dados de entrada
